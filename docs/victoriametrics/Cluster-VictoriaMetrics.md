@@ -8,6 +8,8 @@ menu:
 title: Cluster version
 aliases:
   - /Cluster-VictoriaMetrics.html
+  - /cluster-victoriametrics/index.html
+  - /cluster-victoriametrics/
 ---
 
 VictoriaMetrics is a fast, cost-effective and scalable time series database. It can be used as a long-term remote storage for Prometheus.
@@ -205,7 +207,7 @@ vmstorage-prod
 
 ### Development Builds
 
-1. [Install go](https://golang.org/doc/install). The minimum supported version is Go 1.22.
+1. [Install go](https://golang.org/doc/install).
 1. Run `make` from [the repository root](https://github.com/VictoriaMetrics/VictoriaMetrics). It should build `vmstorage`, `vmselect`
    and `vminsert` binaries and put them into the `bin` folder.
 
@@ -269,7 +271,7 @@ Ports may be altered by setting `-httpListenAddr` on the corresponding nodes.
 It is recommended setting up [monitoring](#monitoring) for the cluster.
 
 The following tools can simplify cluster setup:
-- [An example docker-compose config for VictoriaMetrics cluster](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/deployment/docker/docker-compose-cluster.yml)
+- [An example docker-compose config for VictoriaMetrics cluster](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/master/deployment/docker#victoriametrics-cluster)
 - [Helm charts for VictoriaMetrics](https://github.com/VictoriaMetrics/helm-charts)
 - [Kubernetes operator for VictoriaMetrics](https://github.com/VictoriaMetrics/operator)
 
@@ -858,7 +860,7 @@ Some workloads may need fine-grained resource usage limits. In these cases the f
   learn about different ways of deleting series.
 - `-search.maxTSDBStatusTopNSeries` at `vmselect` limits the number of unique time
   series that can be queried with topN argument by a single
-  [/api/v1/status/tsdb?topN=N](https://docs.victoriametrics.com/readme/#tsdb-stats)
+  [/api/v1/status/tsdb?topN=N](https://docs.victoriametrics.com/#tsdb-stats)
   call. 
 - `-search.maxTagKeys` at `vmstorage` limits the number of items, which may be returned from
   [/api/v1/labels](https://docs.victoriametrics.com/url-examples/#apiv1labels). This endpoint is used mostly by Grafana
