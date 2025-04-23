@@ -64,7 +64,7 @@ Note: All the target-level labels which are not prefixed with `__` are automatic
 
 See also [relabeling docs at vmagent](https://docs.victoriametrics.com/vmagent/#relabeling).
 
-## How to remove labels from metrics subset
+### How to remove labels from metrics subset
 
 You can remove certain labels from some metrics without affecting other labels by using the `if` parameter with `labeldrop` action. The `if` parameter is a [series selector](https://docs.victoriametrics.com/keyconcepts/#filtering) - it looks at the metric name and labels of each scraped time series.
 
@@ -76,7 +76,7 @@ For instance, this config below removes the `cpu` and `mode` labels, but only fr
       regex: "cpu|mode"
   ```
 
-## How to rename scraped metrics
+### How to rename scraped metrics
 
 The metric name is actually the value of a special label called `__name__` (see [Key Concepts](https://docs.victoriametrics.com/keyconcepts/#labels)). So renaming a metric is performed in the same way as changing a label value. Let's take some examples:
 
@@ -107,7 +107,7 @@ The metric name is actually the value of a special label called `__name__` (see 
     target_label: __name__
   ```
 
-## How to add labels to scraped metrics
+### How to add labels to scraped metrics
 
 You can add custom labels to scraped metrics using `target_label` to set the label name and the `replacement` field to set the label value. For example:
 
@@ -126,7 +126,7 @@ You can add custom labels to scraped metrics using `target_label` to set the lab
     replacement: platform
   ```
 
-## How to change label values in scraped metrics
+### How to change label values in scraped metrics
 
 To change the label values of scraped metrics, we use the following fields:
 - `target_label`: the label we want to modify (if it exists) or create,
@@ -152,7 +152,7 @@ Below are a few illustrations:
     replacement: prod_$1
   ```
 
-## How to remove labels from scraped metrics
+### How to remove labels from scraped metrics
 
 Removing labels from scraped metrics is a good idea to avoid [high cardinality](https://docs.victoriametrics.com/faq/#what-is-high-cardinality) and [high churn rate](https://docs.victoriametrics.com/faq/#what-is-high-churn-rate) issues.
 
@@ -175,7 +175,7 @@ Note that:
 
 - Labels that start with `__` are removed automatically after relabeling, so you don't need to drop them with relabeling rules.
 
-## How to drop metrics during scrape
+### How to drop metrics during scrape
 
 All examples above work at the label level: adding, dropping, or changing label values of scraped metrics. You can also drop entire metrics. This is especially beneficial for metrics that result in [high cardinality](https://docs.victoriametrics.com/faq/#what-is-high-cardinality) or [high churn rate](https://docs.victoriametrics.com/faq/#what-is-high-churn-rate).
 
@@ -197,7 +197,7 @@ Note that the relabeling config is specified under the `metric_relabel_configs` 
 - The `scrape_configs[].relabel_configs` apply before scraping, modifying or filtering targets. Any changes here affect all metrics from that target.
 - The `scrape_configs[].metric_relabel_configs` apply after scraping, modifying or filtering individual metrics.
 
-## How to remove labels from targets
+### How to remove labels from targets
 
 To remove some labels from targets discovered by the scrape job, use either:
 - `action: labeldrop`: drops labels with names matching the given `regex` option
@@ -234,7 +234,7 @@ Note that:
 - Do not remove `instance` and `job` labels, since this may result in duplicate scrape targets with identical sets of labels.
 - The `regex` option must match the whole label name from start to end, not just a part of it.
 
-## How to remove labels from a subset of targets
+### How to remove labels from a subset of targets
 
 To remove some target-labels from a subset of discovered targets, use the `if` [series selector](https://docs.victoriametrics.com/keyconcepts/#filtering) with `action: labeldrop` or `action: labelkeep` relabeling rule.
 
@@ -258,7 +258,7 @@ scrape_configs:
 
 [Try the above config here.](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22pod_label_%241%22%0A-+action%3A+labeldrop%0A++if%3A+%27%7B__address__%3D%7E%22pod123.%2B%22%7D%27%0A++regex%3A+%22pod_label_internal_.*%22&labels=container_cpu_usage_seconds_total%7B__address__%3D%22pod123-api-0.default.svc%3A8080%22%2C__meta_kubernetes_pod_label_app%3D%22api%22%2C__meta_kubernetes_pod_label_env%3D%22staging%22%2C__meta_kubernetes_pod_label_internal_cost_center%3D%22devops%22%2C__meta_kubernetes_pod_label_internal_sensitive%3D%22true%22%7D)
 
-## How to remove prefixes from target label names
+### How to remove prefixes from target label names
 
 You can modify target-labels including removing prefixes with the `action: labelmap` option.
 
@@ -287,7 +287,7 @@ Note that:
 
 - The `regex` option must match the whole label name from start to end, not just a part of it.
 
-## How to extract label parts
+### How to extract label parts
 
 Relabeling allows extracting parts from label values and storing them into arbitrary labels. This is performed with:
 
@@ -324,7 +324,7 @@ Note that:
 - The `regex` option must match the whole label value from start to end, not just a part of it.
 - If `source_labels` contains multiple labels, their values are joined with a `;` separator (customized by the `separator` option) before being matched against the `regex`.
 
-## How to modify instance and job
+### How to modify instance and job
 
 `instance` and `job` labels are automatically added by single-node VictoriaMetrics and [vmagent](https://docs.victoriametrics.com/vmagent/) for each discovered target.
 
@@ -345,7 +345,7 @@ scrape_configs:
 
 [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+job%0A++replacement%3A+kubernetes_pod_metrics&labels=container_memory_usage_bytes%7B__address__%3D%2210.42.3.99%3A8080%22%2C+container%3D%22checkout%22%2C+pod%3D%22checkout-api-5d9f%22%2C+namespace%3D%22production%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.3.99%3A8080%22%7D+65432100)
 
-## How to modify scrape URLs in targets
+### How to modify scrape URLs in targets
 
 URLs for scrape targets are composed of the following parts:
 
@@ -381,7 +381,7 @@ scrape_configs:
 
 [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+__scheme__%0A++replacement%3A+https%0A-+source_labels%3A+%5B__meta_kubernetes_pod_name%5D%0A++target_label%3A+__address__%0A-+source_labels%3A+%5B__meta_kubernetes_pod_container_name%5D%0A++target_label%3A+__param_name&labels=container_cpu_usage_seconds_total%7B__meta_kubernetes_pod_name%3D%22checkout-api-58c9d%22%2C+__meta_kubernetes_pod_container_name%3D%22app%22%2C+__meta_kubernetes_namespace%3D%22production%22%2C+__meta_kubernetes_pod_ip%3D%2210.42.6.25%22%2C+__address__%3D%2210.42.6.25%3A9100%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.6.25%3A9100%22%7D)
 
-## How to copy labels in scrape targets
+### How to copy labels in scrape targets
 
 Labels can be copied using the following options:
 
@@ -419,7 +419,7 @@ scrape_configs:
 
 [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_name%2C+__meta_kubernetes_pod_container_port_number%5D%0A++separator%3A+%22%3A%22%0A++target_label%3A+host_port&labels=container_network_receive_bytes_total%7B__meta_kubernetes_pod_name%3D%22api-server-746d95f76f-7r2hp%22%2C__meta_kubernetes_pod_container_port_number%3D%228080%22%2Cnamespace%3D%22backend%22%2Ccontainer%3D%22api%22%2Cinterface%3D%22eth0%22%7D)
 
-## How to add labels to scrape targets
+### How to add labels to scrape targets
 
 To add or update labels on scrape targets during discovery, use these options:
 
@@ -459,7 +459,7 @@ scrape_configs:
 
 See also [useful tips for target relabeling](#useful-tips-for-target-relabeling).
 
-## How to drop discovered targets
+### How to drop discovered targets
 
 To drop a particular discovered target, use the following options:
 
