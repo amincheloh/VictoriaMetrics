@@ -7,6 +7,8 @@ menu:
     weight: 29
 aliases:
 - /Articles.html
+- /articles/index.html
+- /articles/
 ---
 See also [case studies](https://docs.victoriametrics.com/casestudies/).
 
@@ -88,6 +90,7 @@ See also [case studies](https://docs.victoriametrics.com/casestudies/).
 * [Migrating to VictoriaMetrics (by Zomato): A Complete Overhaul for Enhanced Observability](https://blog.zomato.com/migrating-to-victoriametrics-a-complete-overhaul-for-enhanced-observability)
 * [Harness the Power of VictoriaMetrics and Grafana Operators for Metrics Management](https://blog.ogenki.io/post/series/observability/metrics/)
 * [Reducing Inter-AZ traffic in VictoriaMetrics with Zonekeeper](https://tanmay-bhat.medium.com/reducing-inter-az-traffic-in-victoriametrics-with-zonekeeper-3bd7e1526796)
+* [Grepping logs remains terrible](https://chronicles.mad-scientist.club/tales/grepping-logs-remains-terrible/)
 
 ## Our articles
 

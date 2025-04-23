@@ -235,9 +235,8 @@ See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3781)
 
 ### Start with docker-compose
 
-[Docker-compose](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/deployment/docker/docker-compose.yml)
+[Docker-compose](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/master/deployment/docker#readme)
 helps to spin up VictoriaMetrics, [vmagent](https://docs.victoriametrics.com/vmagent/) and Grafana with one command.
-More details may be found [here](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/master/deployment/docker#folder-contains-basic-images-and-tools-for-building-and-running-victoria-metrics-in-docker).
 
 ## Playgrounds
 
@@ -482,7 +481,7 @@ To get metric names usage statistics, use the `/prometheus/api/v1/status/metric_
 
 * `limit` - integer value to limit the number of metric names in response. By default, API returns 1000 records.
 * `le` -  `less than or equal`, is an integer threshold for filtering metric names by their usage count in queries. For example, with `?le=1` API returns metric names that were queried <=1 times.
-* `match_pattern` - a substring pattern to match metric names. For example, `?match_pattern=vm_` will match any metric names with `vm_` pattern, like `vm_http_requests`, `max_vm_memory_available`. It doesn't support regex syntax.
+* `match_pattern` - a regex pattern to match metric names. For example, `?match_pattern=vm_` will match any metric names with `vm_` pattern, like `vm_http_requests`, `max_vm_memory_available`.
 
  The API endpoint returns the following `JSON` response:
 
@@ -1146,7 +1145,7 @@ to your needs or when testing bugfixes.
 
 ### Development build
 
-1. [Install Go](https://golang.org/doc/install). The minimum supported version is Go 1.22.
+1. [Install Go](https://golang.org/doc/install).
 1. Run `make victoria-metrics` from the root folder of [the repository](https://github.com/VictoriaMetrics/VictoriaMetrics).
    It builds `victoria-metrics` binary and puts it into the `bin` folder.
 
@@ -1162,7 +1161,7 @@ ARM build may run on Raspberry Pi or on [energy-efficient ARM servers](https://b
 
 ### Development ARM build
 
-1. [Install Go](https://golang.org/doc/install). The minimum supported version is Go 1.22.
+1. [Install Go](https://golang.org/doc/install).
 1. Run `make victoria-metrics-linux-arm` or `make victoria-metrics-linux-arm64` from the root folder of [the repository](https://github.com/VictoriaMetrics/VictoriaMetrics).
    It builds `victoria-metrics-linux-arm` or `victoria-metrics-linux-arm64` binary respectively and puts it into the `bin` folder.
 
@@ -1176,7 +1175,7 @@ ARM build may run on Raspberry Pi or on [energy-efficient ARM servers](https://b
 
 `Pure Go` mode builds only Go code without [cgo](https://golang.org/cmd/cgo/) dependencies.
 
-1. [Install Go](https://golang.org/doc/install). The minimum supported version is Go 1.22.
+1. [Install Go](https://golang.org/doc/install).
 1. Run `make victoria-metrics-pure` from the root folder of [the repository](https://github.com/VictoriaMetrics/VictoriaMetrics).
    It builds `victoria-metrics-pure` binary and puts it into the `bin` folder.
 
@@ -1829,7 +1828,7 @@ By default, VictoriaMetrics is tuned for an optimal resource usage under typical
   different ways of deleting series.
 - `-search.maxTSDBStatusTopNSeries` at `vmselect` limits the number of unique time
   series that can be queried with topN argument by a single
-  [/api/v1/status/tsdb?topN=N](https://docs.victoriametrics.com/readme/#tsdb-stats)
+  [/api/v1/status/tsdb?topN=N](#tsdb-stats)
   call.
 - `-search.maxTagKeys` limits the number of items, which may be returned from [/api/v1/labels](https://docs.victoriametrics.com/url-examples/#apiv1labels).
   This endpoint is used mostly by Grafana for auto-completion of label names. Queries to this endpoint may take big amounts of CPU time and memory
@@ -2081,7 +2080,7 @@ since no time or disk space is spent maintaining the per-day index.
 
 Example use cases:
 
-* Historical weather data, such as [ERA5](https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels).
+* Historical weather data, such as [ERA5](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview).
   It consists of millions time series whose hourly values span tens of years. The time series set never changes.
   If the per-day index is disabled, once the first hour of data is ingested the entire time series set will be written
   into the global index and subsequent portions of data will not result in index update. But if the per-day index
@@ -2409,6 +2408,8 @@ This may lead to inflated values when samples for the same time series are sprea
 due to [replication](#replication) or [rerouting](https://docs.victoriametrics.com/cluster-victoriametrics/?highlight=re-routes#cluster-availability).
 
 VictoriaMetrics provides UI on top of `/api/v1/status/tsdb` - see [cardinality explorer docs](#cardinality-explorer).
+
+VictoriaMetrics enhances Prometheus stats with `requestsCount` and `lastRequestTimestamp` for `seriesCountByMetricName`. This stats added if [tracking metric names stats](https://docs.victoriametrics.com/#track-ingested-metrics-usage) is configured.
 
 ## Query tracing
 
@@ -2849,7 +2850,7 @@ and gets automatically updated once changes are merged to [master](https://githu
 To update the documentation follow the steps below:
 - [Fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks) 
   VictoriaMetrics repo and apply changes to the docs:
-  - To update [the main page](https://docs.victoriametrics.com/) modify [this file](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/docs/README.md).
+  - To update [the main page](https://docs.victoriametrics.com/) modify [this file](https://github.com/VictoriaMetrics/VictoriaMetrics/blob/master/docs/victoriametrics/README.md).
   - To update other pages, apply changes to the corresponding file in [docs folder](https://github.com/VictoriaMetrics/VictoriaMetrics/tree/master/docs).
 - If your changes contain an image then see [images in documentation](https://docs.victoriametrics.com/#images-in-documentation).
 - Create [a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)
@@ -3301,6 +3302,8 @@ Pass `-help` to VictoriaMetrics in order to see the list of supported command-li
      Supports the following optional suffixes for size values: KB, MB, GB, TB, KiB, MiB, GiB, TiB (default 0)
   -search.logSlowQueryDuration duration
      Log queries with execution time exceeding this value. Zero disables slow query logging. See also -search.logQueryMemoryUsage (default 5s)
+  -search.logSlowQueryStats duration
+      Log query statistics if execution time exceeding this value - see https://docs.victoriametrics.com/query-stats. Zero disables slow query statistics logging. This flag is available only in VictoriaMetrics enterprise. See https://docs.victoriametrics.com/enterprise/
   -search.maxConcurrentRequests int
      The maximum number of concurrent search requests. It shouldn't be high, since a single request can saturate all the CPU cores, while many concurrently executed requests may require high amounts of memory. See also -search.maxQueueDuration and -search.maxMemoryPerQuery (default 16)
   -search.maxDeleteDuration duration
