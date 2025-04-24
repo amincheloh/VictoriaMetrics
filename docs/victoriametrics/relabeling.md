@@ -19,15 +19,15 @@ VictoriaMetrics and vmagent support Prometheus-style relabeling with [extra feat
 
 ## Relabeling Stages
 
-Relabeling in Prometheus happens in two main stages: during service discovery (`relabel_configs`), and during scraping (`metric_relabel_configs`).
+Relabeling in VictoriaMetrics happens in three main stages: during service discovery (`relabel_configs`), during scraping (`metric_relabel_configs`), and during remote write (`-remoteWrite.urlRelabelConfig`).
 
-Relabeling begins with `relabel_configs`, which are applied during the service discovery phase, before any scraping occurs.
+**1. Service Discovery Relabeling**
 
-These are applied during the service discovery phase, before VictoriaMetrics starts scraping any metrics. The goal here is to process and filter the list of targets that Prometheus discovers. You can add, remove, or modify target labels, or even drop targets altogether.
+Relabeling begins with `relabel_configs`, which are applied during the service discovery phase, before VictoriaMetrics starts scraping any metrics. The goal here is to process and filter the list of targets that VictoriaMetrics discovers. You can add, remove, or modify target labels, or even drop targets altogether.
 
 For example, you may want to scrape only the targets with the label `env=prod`:
 
-```yaml
+```yaml {hl_lines="2"}
 relabel_configs:
 - source_labels: [env]
   regex: prod
@@ -36,9 +36,194 @@ relabel_configs:
 
 This keeps only targets where the env label is `prod`, and drops the rest.
 
-Once VictoriaMetrics has finished selecting the targets using `relabel_configs`, it starts scraping those endpoints. After scraping, you can apply `metric_relabel_configs`. This is the second stage, and it operates on **individual metrics**, not the targets. This means you can filter or modify the scraped time series before VictoriaMetrics stores them in its time series database.
+**2. Scraping Relabeling**
 
-## Relabeling Cheat Sheet
+Once VictoriaMetrics has finished selecting the targets using `relabel_configs`, it starts scraping those endpoints. 
+
+After scraping, you can apply `metric_relabel_configs`. This is the second stage, and it operates on **individual metrics** that were just scraped from the targets, not the targets themselves. This means you can filter or modify the scraped time series before VictoriaMetrics stores them in its time series database.
+
+**3. Remote Write Relabeling**
+
+This happens after `metric_relabel_configs` have been processed, just before the metrics are sent to a specific `remoteWrite.url` destination configured in vmagent.
+
+The purpose of this stage is to apply destination-specific relabeling rules. This is a key feature for routing and filtering data differently for multiple backends. For example, you could use this stage to:
+
+- Send only metrics with `env=prod` to your production VictoriaMetrics cluster.
+- Send only metrics with `env=dev` to a development cluster.
+- Send a subset of metrics (e.g., only specific high-importance ones) to a Kafka topic for real-time processing, while sending all metrics to long-term storage.
+- Drop certain labels only for metrics going to one specific backend but keep them for another.
+
+## Relabling Actions
+
+### Relabeling Enhancements
+
+`vmagent` provides the following enhancements on top of Prometheus-compatible relabeling:
+
+* The `replacement` field allows constructing new label values by referencing existing ones using the `{{label_name}}` syntax. For example, if a metric has the labels `{instance="host123", job="node_exporter"}`, this rule will set the `instance-job` label to `host123-node_exporter` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22instance-job%22%0A++replacement%3A+%22%7B%7Binstance%7D%7D-%7B%7Bjob%7D%7D%22&labels=node_cpu_seconds_total%7Bcpu%3D%220%22%2C+instance%3D%22server-1%3A9100%22%2C+job%3D%22node_exporter%22%2C+mode%3D%22idle%22%7D)):
+
+  ```yaml
+  - target_label: "instance-job"
+    replacement: "{{instance}}-{{job}}"
+  ```
+
+* The `if` filter applies the `action` only to samples that match one or more [time series selectors](https://docs.victoriametrics.com/keyconcepts/#filtering). It supports a single selector or a list. If any selector matches, the `action` is applied.
+
+  For example, the following relabeling rule keeps metrics matching `node_memory_MemAvailable_bytes{instance="host123"}` series selector, while dropping the rest of metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27node_memory_MemAvailable_bytes%7Binstance%3D%22host123%22%7D%27%0A++action%3A+keep&labels=node_memory_MemAvailable_bytes%7Binstance%3D%22host456%22%2C+job%3D%22node_exporter%22%7D)):
+
+  ```yaml
+  - if: 'node_memory_MemAvailable_bytes{instance="host123"}'
+    action: keep
+  ```
+
+  This is equivalent to the following, less intuitive Prometheus-compatible rule:
+
+  ```yaml
+  - action: keep
+    source_labels: [__name__, instance]
+    regex: 'node_memory_MemAvailable_bytes;host123'
+  ```
+
+  The `if` option can include multiple filters. If any one of them matches a sample, the action will be applied. For example, the rule below adds the label `team="infra"` to all samples where `job="api"` OR `instance="web-1"` ([Try it](hhttps://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+team%0A++replacement%3A+infra%0A++if%3A%0A++-+%27%7Bjob%3D%22api%22%7D%27%0A++-+%27%7Binstance%3D%22web-1%22%7D%27&labels=http_requests_total%7Bjob%3D%22api%22%2C+instance%3D%22web-2%22%7D)):
+
+  ```yaml
+  - target_label: team
+    replacement: infra
+    if:
+    - '{job="api"}'
+    - '{instance="web-1"}'
+  ```
+
+* The regex can be split into multiple lines for better readability. VictoriaMetrics automatically combines them using `|` (OR). The two examples below are treated the same and match `http_requests_total`, `node_memory_MemAvailable_bytes`, or any metric starting with `nginx_` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A%0A++-+%22http_requests_total%22%0A++-+%22node_memory_MemAvailable_bytes%22%0A++-+%22nginx_.%2B%22&labels=nginx_latency_seconds%7Binstance%3D%22host2%22%7D)):
+
+  ```yaml
+  - action: keep_metrics
+    regex: "http_requests_total|node_memory_MemAvailable_bytes|nginx_.+"
+  ```
+
+  ```yaml
+  - action: keep_metrics
+    regex:
+    - "http_requests_total"
+    - "node_memory_MemAvailable_bytes"
+    - "nginx_.+"
+  ```
+
+* VictoriaMetrics adds extra relabeling actions beyond [Prometheus relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config):
+
+  * `replace_all` Replaces all matches of regex in source_labels with replacement, and writes the result to target_label. Example: replaces all dashes `-` with underscores `_` in metric names (e.g. `http-request-latency` to `http_request_latency`. [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+replace_all%0A++source_labels%3A+%5B%22__name__%22%5D%0A++target_label%3A+%22__name__%22%0A++regex%3A+%22-%22%0A++replacement%3A+%22_%22&labels=http-request-latency%7Binstance%3D%22server-1%22%7D)):
+    ```yaml
+    - action: replace_all
+      source_labels: ["__name__"]
+      target_label: "__name__"
+      regex: "-"
+      replacement: "_"
+    ```
+
+  * `labelmap_all`: Replaces all matches of `regex` in **label names**. Example: Replace `-` with `_` in all label names (e.g. `pod-label-region` → `pod_label_region`. [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap_all%0A++regex%3A+%22-%22%0A++replacement%3A+%22_%22&labels=http_requests_total%7Bpod-label-region%3D%22us-west%22%2C+pod-label-app%3D%22frontend%22%7D)):
+    ```yaml
+    - action: labelmap_all
+      regex: "-"
+      replacement: "_"
+    ```
+
+  * `keep_if_equal`: Keeps the entry only if all `source_labels` have the same value. Example: Keep targets where `instance` and `host` are equal ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=node_cpu_seconds_total%7Binstance%3D%22srv2%22%2C+host%3D%22srv3%22%7D)):
+    ```yaml
+    - action: keep_if_equal
+      source_labels: ["instance", "host"]
+    ```
+
+  * `drop_if_equal`: Drops the entry if all `source_labels` have the same value. Example: Drop targets where `instance` equals `host` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=node_cpu_seconds_total%7Binstance%3D%22srv3%22%2C+host%3D%22srv3%22%7D)):
+    ```yaml
+    - action: drop_if_equal
+      source_labels: ["instance", "host"]
+    ```
+
+  * `keep_if_contains`: Keeps the entry if `target_label` contains all values from `source_labels`. Example: Keep if `__meta_consul_tags` contains the value of `required_tag` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Brequired_tag%5D&labels=up%7B__meta_consul_tags%3D%22dev%2Cweb%22%2C+required_tag%3D%22api%22%7D)):
+    ```yaml
+    - action: keep_if_contains
+      target_label: __meta_consul_tags
+      source_labels: [required_tag]
+    ```
+
+  * `drop_if_contains`: Drops the entry if `target_label` contains all values from `source_labels`. Example: Drop if `__meta_consul_tags` label value contains the value of `blocked_tag` label value ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Bblocked_tag%5D&labels=up%7B__meta_consul_tags%3D%22prod%2Capi%22%2C+blocked_tag%3D%22api%22%7D)):
+    ```yaml
+    - action: drop_if_contains
+      target_label: __meta_consul_tags
+      source_labels: [blocked_tag]
+    ```
+
+  * `keep_metrics`: Keeps metrics whose names match the `regex`. Example: Keep only `http_requests_total` and `node_memory_Active_bytes` metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A+%22http_requests_total%7Cnode_memory_Active_bytes%22&labels=node_memory_Active_bytes%7Bjob%3D%22node%22%7D)):
+    ```yaml
+    - action: keep_metrics
+      regex: "http_requests_total|node_memory_Active_bytes"
+    ```
+
+  * `drop_metrics`: Drops metrics whose names match the `regex`. Example: Drop `go_gc_duration_seconds` and `process_cpu_seconds_total` metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_metrics%0A++regex%3A+%22go_gc_duration_seconds%7Cprocess_cpu_seconds_total%22&labels=go_gc_duration_seconds%7Bjob%3D%22go-app%22%7D)):
+    ```yaml
+    - action: drop_metrics
+      regex: "go_gc_duration_seconds|process_cpu_seconds_total"
+    ```
+
+  * `graphite`: Applies Graphite-style relabeling rules to extract labels from metric names ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+graphite%0A++match%3A+%27*.server.*.total%27%0A++labels%3A%0A++++__name__%3A+%24%7B2%7D_total%0A++++instance%3A+%24%7B2%7D%3A9100%0A++++job%3A+%241&labels=app1.server.requests.total)). See [Graphite Relabeling](#graphite-relabeling) for details.
+
+### Graphite Relabeling
+
+VictoriaMetrics components support `action: graphite` relabeling rules, which allow extracting various parts from Graphite-style metrics
+into the configured labels with the syntax similar to [Glob matching in statsd_exporter](https://github.com/prometheus/statsd_exporter#glob-matching).
+Note that the `name` field must be substituted with explicit `__name__` option under `labels` section.
+If `__name__` option is missing under `labels` section, then the original Graphite-style metric name is left unchanged.
+
+For example, the following relabeling rule generates `requests_total{job="app42",instance="host124:8080"}` metric
+from `app42.host123.requests.total` Graphite-style metric:
+
+```yaml
+- action: graphite
+  match: "*.*.*.total"
+  labels:
+    __name__: "${3}_total"
+    job: "$1"
+    instance: "${2}:8080"
+```
+
+Important notes about `action: graphite` relabeling rules:
+
+- The relabeling rule is applied only to metrics, which match the given `match` expression. Other metrics remain unchanged.
+- The `*` matches the maximum possible number of chars until the next dot or until the next part of the `match` expression whichever comes first.
+  It may match zero chars if the next char is `.`.
+  For example, `match: "app*foo.bar"` matches `app42foo.bar` and `42` becomes available to use at `labels` section via `$1` capture group.
+- The `$0` capture group matches the original metric name.
+- The relabeling rules are executed in order defined in the original config.
+
+The `action: graphite` relabeling rules are easier to write and maintain than `action: replace` for labels extraction from Graphite-style metric names.
+Additionally, the `action: graphite` relabeling rules usually work much faster than the equivalent `action: replace` rules.
+
+### Relabel debug
+
+`vmagent` and [single-node VictoriaMetrics](https://docs.victoriametrics.com/#how-to-scrape-prometheus-exporters-such-as-node-exporter)
+provide the following tools for debugging target-level and metric-level relabeling:
+
+- Target-level debugging (e.g. `relabel_configs` section at [scrape_configs](https://docs.victoriametrics.com/sd_configs/#scrape_configs))
+  can be performed by navigating to `http://vmagent:8429/targets` page (`http://victoriametrics:8428/targets` page for single-node VictoriaMetrics)
+  and clicking the `debug target relabeling` link at the target, which must be debugged.
+  The link is unavailable if `vmagent` runs with `-promscrape.dropOriginalLabels` command-line flag.
+  The opened page shows step-by-step results for the actual target relabeling rules applied to the discovered target labels.
+  The page shows also the target URL generated after applying all the relabeling rules.
+
+  The `http://vmagent:8429/targets` page shows only active targets. If you need to understand why some target
+  is dropped during the relabeling, then navigate to `http://vmagent:8428/service-discovery` page
+  (`http://victoriametrics:8428/service-discovery` for single-node VictoriaMetrics), find the dropped target
+  and click the `debug` link there. The link is unavailable if `vmagent` runs with `-promscrape.dropOriginalLabels` command-line flag.
+  The opened page shows step-by-step results for the actual relabeling rules, which result to target drop.
+
+- Metric-level debugging (e.g. `metric_relabel_configs` section at [scrape_configs](https://docs.victoriametrics.com/sd_configs/#scrape_configs)
+  can be performed by navigating to `http://vmagent:8429/targets` page (`http://victoriametrics:8428/targets` page for single-node VictoriaMetrics)
+  and clicking the `debug metrics relabeling` link at the target, which must be debugged.
+  The link is unavailable if `vmagent` runs with `-promscrape.dropOriginalLabels` command-line flag.
+  The opened page shows step-by-step results for the actual metric relabeling rules applied to the given target labels.
+
+See also [debugging scrape targets](#debugging-scrape-targets).
+
+## Relabeling Use Cases
 
 **Target-level relabeling** is applied during [service discovery](https://docs.victoriametrics.com/sd_configs/#prometheus-service-discovery) and affects the targets (which will be scraped), their labels and all the metrics scraped from them:
 
@@ -53,7 +238,7 @@ Once VictoriaMetrics has finished selecting the targets using `relabel_configs`,
 
 Note: All the target-level labels which are not prefixed with `__` are automatically added to all the metrics scraped from targets.
 
-**Metric-level relabeling** is applied after metrics are scraped and affects the individual metrics:
+**Metric-level relabeling** is applied after metrics are scraped (scraping relabeling `metric_relabel_configs` and remote write relabeling `-remoteWrite.urlRelabelConfig`) and affects the individual metrics:
 
 - [Drop metrics](#how-to-drop-metrics-during-scrape): Filter out specific metrics to reduce cardinality and storage requirements
 - [Rename metrics](#how-to-rename-scraped-metrics): Change metric names to follow naming conventions or standards

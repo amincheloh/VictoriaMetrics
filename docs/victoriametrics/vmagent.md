@@ -646,7 +646,6 @@ The following articles contain useful information about Prometheus relabeling:
   arbitrary [time series selector](https://docs.victoriametrics.com/keyconcepts/#filtering).
   The `action` is performed only for [samples](https://docs.victoriametrics.com/keyconcepts/#raw-samples), which match the provided `if` filter.
   For example, the following relabeling rule keeps metrics matching `foo{bar="baz"}` series selector, while dropping the rest of metrics:
-
   ```yaml
   - if: 'foo{bar="baz"}'
     action: keep
