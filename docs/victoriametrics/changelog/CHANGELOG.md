@@ -49,7 +49,7 @@ See also [LTS releases](https://docs.victoriametrics.com/lts-releases/).
 * BUGFIX: [vmui](https://docs.victoriametrics.com/#vmui): fix duplicated series in the legend on the Raw Query page when deduplication is disabled. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/8688).
 * BUGFIX: [vmui](https://docs.victoriametrics.com/#vmui): respect `-http.pathPrefix` flag when requesting `/flags` API endpoint in vmui. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/8641) for details.
 * BUGFIX: [vmsingle](https://docs.victoriametrics.com/single-server-victoriametrics/), `vmstorage` and `vmselect` in [VictoriaMetrics cluster](https://docs.victoriametrics.com/cluster-victoriametrics/): allow using `-downsampling.period=filter:0s:0s` to skip downsampling for time series that match the specified `filter`. See [this doc](https://docs.victoriametrics.com/#downsampling).
-* BUGFIX: [vmalert](https://docs.victoriametrics.com/vmalert): fixed various UI glitches and tidy up the visual styles.
+* BUGFIX: [vmalert](https://docs.victoriametrics.com/vmalert): fixed various UI glitches and tidy up the visual styles. See [this issue](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/8773) for details.
 
 ## [v1.115.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.115.0)
 
