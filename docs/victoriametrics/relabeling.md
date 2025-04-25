@@ -53,11 +53,11 @@ The purpose of this stage is to apply destination-specific relabeling rules. Thi
 - Send a subset of metrics (e.g., only specific high-importance ones) to a Kafka topic for real-time processing, while sending all metrics to long-term storage.
 - Drop certain labels only for metrics going to one specific backend but keep them for another.
 
-## Relabling Actions
+## Relabeling Actions
 
 ### Relabeling Enhancements
 
-`vmagent` provides the following enhancements on top of Prometheus-compatible relabeling:
+VictoriaMetrics provides the following enhancements on top of Prometheus-compatible relabeling:
 
 * The `replacement` field allows constructing new label values by referencing existing ones using the `{{label_name}}` syntax. For example, if a metric has the labels `{instance="host123", job="node_exporter"}`, this rule will set the `instance-job` label to `host123-node_exporter` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22instance-job%22%0A++replacement%3A+%22%7B%7Binstance%7D%7D-%7B%7Bjob%7D%7D%22&labels=node_cpu_seconds_total%7Bcpu%3D%220%22%2C+instance%3D%22server-1%3A9100%22%2C+job%3D%22node_exporter%22%2C+mode%3D%22idle%22%7D)):
 
