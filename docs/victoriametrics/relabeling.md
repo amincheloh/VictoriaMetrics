@@ -3,14 +3,14 @@ weight: 38
 title: Relabeling cookbook
 menu:
   docs:
-    parent: 'victoriametrics'
+    parent: "victoriametrics"
     weight: 38
 tags:
   - metrics
 aliases:
-- /relabeling.html
-- /relabeling/index.html
-- /relabeling/
+  - /relabeling.html
+  - /relabeling/index.html
+  - /relabeling/
 ---
 
 The relabeling cookbook provides practical examples and patterns for transforming your metrics data as it flows through VictoriaMetrics, helping you control what gets collected and how it's labeled.
@@ -29,16 +29,16 @@ For example, you may want to scrape only the targets with the label `env=prod`:
 
 ```yaml {hl_lines="2"}
 relabel_configs:
-- source_labels: [env]
-  regex: prod
-  action: keep
+  - source_labels: [env]
+    regex: prod
+    action: keep
 ```
 
 This keeps only targets where the env label is `prod`, and drops the rest.
 
 **2. Scraping Relabeling**
 
-Once VictoriaMetrics has finished selecting the targets using `relabel_configs`, it starts scraping those endpoints. 
+Once VictoriaMetrics has finished selecting the targets using `relabel_configs`, it starts scraping those endpoints.
 
 After scraping, you can apply `metric_relabel_configs`. This is the second stage, and it operates on **individual metrics** that were just scraped from the targets, not the targets themselves. This means you can filter or modify the scraped time series before VictoriaMetrics stores them in its time series database.
 
@@ -59,58 +59,58 @@ The purpose of this stage is to apply destination-specific relabeling rules. Thi
 
 VictoriaMetrics provides the following enhancements on top of Prometheus-compatible relabeling:
 
-* The `replacement` field allows constructing new label values by referencing existing ones using the `{{label_name}}` syntax. For example, if a metric has the labels `{instance="host123", job="node_exporter"}`, this rule will set the `instance-job` label to `host123-node_exporter` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22instance-job%22%0A++replacement%3A+%22%7B%7Binstance%7D%7D-%7B%7Bjob%7D%7D%22&labels=node_cpu_seconds_total%7Bcpu%3D%220%22%2C+instance%3D%22server-1%3A9100%22%2C+job%3D%22node_exporter%22%2C+mode%3D%22idle%22%7D)):
-
+- The `replacement` field allows constructing new label values by referencing existing ones using the `{{label_name}}` syntax. For example, if a metric has the labels `{instance="host123", job="node_exporter"}`, this rule will set the `instance-job` label to `host123-node_exporter`:
   ```yaml
   - target_label: "instance-job"
     replacement: "{{instance}}-{{job}}"
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22instance-job%22%0A++replacement%3A+%22%7B%7Binstance%7D%7D-%7B%7Bjob%7D%7D%22%0A&labels=%7B__name__%3D%22node_cpu_seconds_total%22%2C+instance%3D%22server-1%3A9100%22%2C+job%3D%22node_exporter%22%2C+mode%3D%22idle%22%2C+cpu%3D%220%22%7D)
 
-* The `if` filter applies the `action` only to samples that match one or more [time series selectors](https://docs.victoriametrics.com/keyconcepts/#filtering). It supports a single selector or a list. If any selector matches, the `action` is applied.
+- The `if` filter applies the `action` only to samples that match one or more [time series selectors](https://docs.victoriametrics.com/keyconcepts/#filtering). It supports a single selector or a list. If any selector matches, the `action` is applied.
 
-  For example, the following relabeling rule keeps metrics matching `node_memory_MemAvailable_bytes{instance="host123"}` series selector, while dropping the rest of metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27node_memory_MemAvailable_bytes%7Binstance%3D%22host123%22%7D%27%0A++action%3A+keep&labels=node_memory_MemAvailable_bytes%7Binstance%3D%22host456%22%2C+job%3D%22node_exporter%22%7D)):
-
+  For example, the following relabeling rule keeps metrics matching `node_memory_MemAvailable_bytes{instance="host123"}` series selector, while dropping the rest of metrics:
   ```yaml
   - if: 'node_memory_MemAvailable_bytes{instance="host123"}'
     action: keep
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27node_memory_MemAvailable_bytes%7Binstance%3D%22host123%22%7D%27%0A++action%3A+keep&labels=%7B__name__%3D%22node_memory_MemAvailable_bytes%22%2C+instance%3D%22host456%22%2C+job%3D%22node_exporter%22%7D)
 
   This is equivalent to the following, less intuitive Prometheus-compatible rule:
 
   ```yaml
   - action: keep
     source_labels: [__name__, instance]
-    regex: 'node_memory_MemAvailable_bytes;host123'
+    regex: "node_memory_MemAvailable_bytes;host123"
   ```
 
-  The `if` option can include multiple filters. If any one of them matches a sample, the action will be applied. For example, the rule below adds the label `team="infra"` to all samples where `job="api"` OR `instance="web-1"` ([Try it](hhttps://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+team%0A++replacement%3A+infra%0A++if%3A%0A++-+%27%7Bjob%3D%22api%22%7D%27%0A++-+%27%7Binstance%3D%22web-1%22%7D%27&labels=http_requests_total%7Bjob%3D%22api%22%2C+instance%3D%22web-2%22%7D)):
-
+  The `if` option can include multiple filters. If any one of them matches a sample, the action will be applied. For example, the rule below adds the label `team="infra"` to all samples where `job="api"` OR `instance="web-1"`:
   ```yaml
   - target_label: team
     replacement: infra
     if:
-    - '{job="api"}'
-    - '{instance="web-1"}'
+      - '{job="api"}'
+      - '{instance="web-1"}'
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+team%0A++replacement%3A+infra%0A++if%3A%0A++-+%27%7Bjob%3D%22api%22%7D%27%0A++-+%27%7Binstance%3D%22web-1%22%7D%27&labels=%7B__name__%3D%22http_requests_total%22%2C+job%3D%22api%22%2C+instance%3D%22web-2%22%7D)
 
-* The regex can be split into multiple lines for better readability. VictoriaMetrics automatically combines them using `|` (OR). The two examples below are treated the same and match `http_requests_total`, `node_memory_MemAvailable_bytes`, or any metric starting with `nginx_` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A%0A++-+%22http_requests_total%22%0A++-+%22node_memory_MemAvailable_bytes%22%0A++-+%22nginx_.%2B%22&labels=nginx_latency_seconds%7Binstance%3D%22host2%22%7D)):
-
+- The regex can be split into multiple lines for better readability. VictoriaMetrics automatically combines them using `|` (OR). The two examples below are treated the same and match `http_requests_total`, `node_memory_MemAvailable_bytes`, or any metric starting with `nginx_`:
   ```yaml
   - action: keep_metrics
     regex: "http_requests_total|node_memory_MemAvailable_bytes|nginx_.+"
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A+%22http_requests_total%7Cnode_memory_MemAvailable_bytes%7Cnginx_.%2B%22&labels=%7B__name__%3D%22nginx_latency_seconds%22%2C+instance%3D%22host2%22%7D)
 
   ```yaml
   - action: keep_metrics
     regex:
-    - "http_requests_total"
-    - "node_memory_MemAvailable_bytes"
-    - "nginx_.+"
+      - "http_requests_total"
+      - "node_memory_MemAvailable_bytes"
+      - "nginx_.+"
   ```
 
-* VictoriaMetrics adds extra relabeling actions beyond [Prometheus relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config):
+- VictoriaMetrics adds extra relabeling actions beyond [Prometheus relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config):
 
-  * `replace_all` Replaces all matches of regex in source_labels with replacement, and writes the result to target_label. Example: replaces all dashes `-` with underscores `_` in metric names (e.g. `http-request-latency` to `http_request_latency`. [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+replace_all%0A++source_labels%3A+%5B%22__name__%22%5D%0A++target_label%3A+%22__name__%22%0A++regex%3A+%22-%22%0A++replacement%3A+%22_%22&labels=http-request-latency%7Binstance%3D%22server-1%22%7D)):
+  - `replace_all` Replaces all matches of regex in source*labels with replacement, and writes the result to target_label. Example: replaces all dashes `-` with underscores `*`in metric names (e.g.`http-request-latency`to`http\*request*latency`:
     ```yaml
     - action: replace_all
       source_labels: ["__name__"]
@@ -118,53 +118,61 @@ VictoriaMetrics provides the following enhancements on top of Prometheus-compati
       regex: "-"
       replacement: "_"
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+replace_all%0A++source_labels%3A+%5B%22__name__%22%5D%0A++target_label%3A+%22__name__%22%0A++regex%3A+%22-%22%0A++replacement%3A+%22*%22&labels=%7B**name**%3D%22http-request-latency%22%2C+instance%3D%22server-1%22%7D)
 
-  * `labelmap_all`: Replaces all matches of `regex` in **label names**. Example: Replace `-` with `_` in all label names (e.g. `pod-label-region` → `pod_label_region`. [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap_all%0A++regex%3A+%22-%22%0A++replacement%3A+%22_%22&labels=http_requests_total%7Bpod-label-region%3D%22us-west%22%2C+pod-label-app%3D%22frontend%22%7D)):
+  - `labelmap_all`: Replaces all matches of `regex` in **label names**. Example: Replace `-` with `_` in all label names (e.g. `pod-label-region` → `pod_label_region`:
     ```yaml
     - action: labelmap_all
       regex: "-"
       replacement: "_"
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap_all%0A++regex%3A+%22-%22%0A++replacement%3A+%22_%22&labels=%7B__name__%3D%22http_requests_total%22%2C+pod-label-region%3D%22us-west%22%2C+pod-label-app%3D%22frontend%22%7D)
 
-  * `keep_if_equal`: Keeps the entry only if all `source_labels` have the same value. Example: Keep targets where `instance` and `host` are equal ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=node_cpu_seconds_total%7Binstance%3D%22srv2%22%2C+host%3D%22srv3%22%7D)):
+  - `keep_if_equal`: Keeps the entry only if all `source_labels` have the same value. Example: Keep targets where `instance` and `host` are equal:
     ```yaml
     - action: keep_if_equal
       source_labels: ["instance", "host"]
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=%7B__name__%3D%22node_cpu_seconds_total%22%2C+instance%3D%22srv2%22%2C+host%3D%22srv3%22%7D)
 
-  * `drop_if_equal`: Drops the entry if all `source_labels` have the same value. Example: Drop targets where `instance` equals `host` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=node_cpu_seconds_total%7Binstance%3D%22srv3%22%2C+host%3D%22srv3%22%7D)):
+  - `drop_if_equal`: Drops the entry if all `source_labels` have the same value. Example: Drop targets where `instance` equals `host`:
     ```yaml
     - action: drop_if_equal
       source_labels: ["instance", "host"]
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_equal%0A++source_labels%3A+%5B%22instance%22%2C+%22host%22%5D&labels=%7B__name__%3D%22node_cpu_seconds_total%22%2C+instance%3D%22srv3%22%2C+host%3D%22srv3%22%7D)
 
-  * `keep_if_contains`: Keeps the entry if `target_label` contains all values from `source_labels`. Example: Keep if `__meta_consul_tags` contains the value of `required_tag` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Brequired_tag%5D&labels=up%7B__meta_consul_tags%3D%22dev%2Cweb%22%2C+required_tag%3D%22api%22%7D)):
+  - `keep_if_contains`: Keeps the entry if `target_label` contains all values from `source_labels`. Example: Keep if `__meta_consul_tags` contains the value of `required_tag`:
     ```yaml
     - action: keep_if_contains
       target_label: __meta_consul_tags
       source_labels: [required_tag]
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Brequired_tag%5D&labels=%7B__name__%3D%22up%22%2C+__meta_consul_tags%3D%22dev%2Capi%22%2C+required_tag%3D%22api%22%7D)
 
-  * `drop_if_contains`: Drops the entry if `target_label` contains all values from `source_labels`. Example: Drop if `__meta_consul_tags` label value contains the value of `blocked_tag` label value ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Bblocked_tag%5D&labels=up%7B__meta_consul_tags%3D%22prod%2Capi%22%2C+blocked_tag%3D%22api%22%7D)):
+  - `drop_if_contains`: Drops the entry if `target_label` contains all values from `source_labels`. Example: Drop if `__meta_consul_tags` label value contains the value of `blocked_tag` label value:
     ```yaml
     - action: drop_if_contains
       target_label: __meta_consul_tags
       source_labels: [blocked_tag]
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_if_contains%0A++target_label%3A+__meta_consul_tags%0A++source_labels%3A+%5Bblocked_tag%5D%0A&labels=%7B__name__%3D%22up%22%2C+__meta_consul_tags%3D%22prod%2Capi%22%2C+blocked_tag%3D%22api%22%7D)
 
-  * `keep_metrics`: Keeps metrics whose names match the `regex`. Example: Keep only `http_requests_total` and `node_memory_Active_bytes` metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A+%22http_requests_total%7Cnode_memory_Active_bytes%22&labels=node_memory_Active_bytes%7Bjob%3D%22node%22%7D)):
+  - `keep_metrics`: Keeps metrics whose names match the `regex`. Example: Keep only `http_requests_total` and `node_memory_Active_bytes` metrics:
     ```yaml
     - action: keep_metrics
       regex: "http_requests_total|node_memory_Active_bytes"
     ```
+    [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+keep_metrics%0A++regex%3A+%22http_requests_total%7Cnode_memory_Active_bytes%22&labels=%7B__name__%3D%22http_requests_total%22%2C+job%3D%22api%22%7D)
 
-  * `drop_metrics`: Drops metrics whose names match the `regex`. Example: Drop `go_gc_duration_seconds` and `process_cpu_seconds_total` metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_metrics%0A++regex%3A+%22go_gc_duration_seconds%7Cprocess_cpu_seconds_total%22&labels=go_gc_duration_seconds%7Bjob%3D%22go-app%22%7D)):
+  - `drop_metrics`: Drops metrics whose names match the `regex`. Example: Drop `go_gc_duration_seconds` and `process_cpu_seconds_total` metrics:
     ```yaml
     - action: drop_metrics
       regex: "go_gc_duration_seconds|process_cpu_seconds_total"
     ```
+     [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+drop_metrics%0A++regex%3A+%22go_gc_duration_seconds%7Cprocess_cpu_seconds_total%22&labels=%7B__name__%3D%22go_gc_duration_seconds%22%2C+job%3D%22go-app%22%7D)
 
-  * `graphite`: Applies Graphite-style relabeling rules to extract labels from metric names ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+graphite%0A++match%3A+%27*.server.*.total%27%0A++labels%3A%0A++++__name__%3A+%24%7B2%7D_total%0A++++instance%3A+%24%7B2%7D%3A9100%0A++++job%3A+%241&labels=app1.server.requests.total)). See [Graphite Relabeling](#graphite-relabeling) for details.
+  - `graphite`: Applies Graphite-style relabeling rules to extract labels from metric names ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+graphite%0A++match%3A+%27*.server.*.total%27%0A++labels%3A%0A++++__name__%3A+%27%24%7B2%7D_total%27%0A++++instance%3A+%27%24%7B2%7D%3A9100%27%0A++++job%3A+%27%241%27&labels=%7B__name__%3D%22app1.server.requests.total%22%7D)). See [Graphite Relabeling](#graphite-relabeling) for details.
 
 ### Graphite Relabeling
 
@@ -253,106 +261,119 @@ See also [relabeling docs at vmagent](https://docs.victoriametrics.com/vmagent/#
 
 You can remove certain labels from some metrics without affecting other labels by using the `if` parameter with `labeldrop` action. The `if` parameter is a [series selector](https://docs.victoriametrics.com/keyconcepts/#filtering) - it looks at the metric name and labels of each scraped time series.
 
-For instance, this config below removes the `cpu` and `mode` labels, but only from the `node_cpu_seconds_total` metric where `mode="idle"` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labeldrop%0A++if%3A+%27node_cpu_seconds_total%7Bmode%3D%22idle%22%7D%27%0A++regex%3A+%22cpu%7Cmode%22&labels=node_cpu_seconds_total%7Bmode%3D%22idle%22%2Cnode%3D%22A%22%7D)):
-  ```yaml
-  metric_relabel_configs:
-    - action: labeldrop
-      if: 'node_cpu_seconds_total{mode="idle"}'
-      regex: "cpu|mode"
-  ```
+For instance, this config below removes the `cpu` and `mode` labels, but only from the `node_cpu_seconds_total` metric where `mode="idle"`:
+
+```yaml
+metric_relabel_configs:
+  - action: labeldrop
+    if: 'node_cpu_seconds_total{mode="idle"}'
+    regex: "cpu|mode"
+```
+
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labeldrop%0A++if%3A+%27node_cpu_seconds_total%7Bmode%3D%22idle%22%7D%27%0A++regex%3A+%22cpu%7Cmode%22&labels=%7B__name__%3D%22node_cpu_seconds_total%22%2C+mode%3D%22idle%22%2C+cpu%3D%220%22%2C+node%3D%22A%22%7D)
 
 ### How to rename scraped metrics
 
 The metric name is actually the value of a special label called `__name__` (see [Key Concepts](https://docs.victoriametrics.com/keyconcepts/#labels)). So renaming a metric is performed in the same way as changing a label value. Let's take some examples:
 
-- Rename `node_cpu_seconds_total` to `vm_node_cpu_seconds_total` across all the scraped metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27node_cpu_seconds_total%27%0A++replacement%3A+vm_node_cpu_seconds_total%0A++target_label%3A+__name__&labels=node_cpu_seconds_total%7Bcpu%3D%220%22%2C+mode%3D%22idle%22%7D)):
+- Rename `node_cpu_seconds_total` to `vm_node_cpu_seconds_total` across all the scraped metrics:
   ```yaml
   metric_relabel_configs:
-  - if: 'node_cpu_seconds_total'
-    replacement: vm_node_cpu_seconds_total
-    target_label: __name__
+    - if: "node_cpu_seconds_total"
+      replacement: vm_node_cpu_seconds_total
+      target_label: __name__
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27node_cpu_seconds_total%27%0A++replacement%3A+vm_node_cpu_seconds_total%0A++target_label%3A+__name__&labels=%7B__name__%3D%22node_cpu_seconds_total%22%2C+cpu%3D%220%22%2C+mode%3D%22idle%22%7D)
 
-- Rename all metrics starting with `http_` to start with `web_` instead (e.g. `http_requests_total` → `web_requests_total`, [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__name__%5D%0A++regex%3A+%27http_%28.*%29%27%0A++replacement%3A+web_%241%0A++target_label%3A+__name__&labels=http_response_time_seconds%7Bmethod%3D%22GET%22%7D)):
+- Rename all metrics starting with `http_` to start with `web_` instead (e.g. `http_requests_total` → `web_requests_total`:
   ```yaml
   metric_relabel_configs:
-  - source_labels: [__name__]
-    regex: 'http_(.*)'
-    replacement: web_$1
-    target_label: __name__
+    - source_labels: [__name__]
+      regex: "http_(.*)"
+      replacement: web_$1
+      target_label: __name__
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__name__%5D%0A++regex%3A+%27http_%28.*%29%27%0A++replacement%3A+web_%241%0A++target_label%3A+__name__&labels=%7B__name__%3D%22http_response_time_seconds%22%2C+method%3D%22GET%22%7D)
 
-- Replace all dashes (`-`) in metric names with underscores (`_`) (e.g. `nginx-ingress-latency` → `nginx_ingress_latency`, [Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__name__%5D%0A++action%3A+replace_all%0A++regex%3A+%27-%27%0A++replacement%3A+%27_%27%0A++target_label%3A+__name__&labels=nginx-ingress-latency%7Bhost%3D%22example.com%22%7D)):
+- Replace all dashes (`-`) in metric names with underscores (`_`) (e.g. `nginx-ingress-latency` → `nginx_ingress_latency`:
   ```yaml
   metric_relabel_configs:
-  - source_labels: [__name__]
-    action: replace_all
-    regex: '-'
-    replacement: '_'
-    target_label: __name__
+    - source_labels: [__name__]
+      action: replace_all
+      regex: "-"
+      replacement: "_"
+      target_label: __name__
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__name__%5D%0A++action%3A+replace_all%0A++regex%3A+%27-%27%0A++replacement%3A+%27_%27%0A++target_label%3A+__name__&labels=%7B__name__%3D%22nginx-ingress-latency%22%2C+host%3D%22example.com%22%7D)
 
 ### How to add labels to scraped metrics
 
 You can add custom labels to scraped metrics using `target_label` to set the label name and the `replacement` field to set the label value. For example:
 
-- Add a `region="us-east-1"` label to all scraped metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+region%0A++replacement%3A+us-east-1&labels=node_memory_MemAvailable_bytes%7Binstance%3D%22server-01%3A9100%22%7D)):
+- Add a `region="us-east-1"` label to all scraped metrics:
   ```yaml
   metric_relabel_configs:
-  - target_label: region
-    replacement: us-east-1
+    - target_label: region
+      replacement: us-east-1
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+region%0A++replacement%3A+us-east-1&labels=%7B__name__%3D%22node_memory_MemAvailable_bytes%22%2C+instance%3D%22server-01%3A9100%22%7D)
 
-- Add a `team="platform"` label only for metrics from jobs that match `web-.*` and are not in the staging environment ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7Bjob%3D%7E%22web-.*%22%2C+environment%21%3D%22staging%22%7D%27%0A++target_label%3A+team%0A++replacement%3A+platform&labels=http_requests_total%7Bjob%3D%22web-api%22%2C+environment%3D%22prod%22%7D)):
+- Add a `team="platform"` label only for metrics from jobs that match `web-.*` and are not in the staging environment :
   ```yaml
   metric_relabel_configs:
-  - if: '{job=~"web-.*", environment!="staging"}'
-    target_label: team
-    replacement: platform
+    - if: '{job=~"web-.*", environment!="staging"}'
+      target_label: team
+      replacement: platform
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7Bjob%3D%7E%22web-.*%22%2C+environment%21%3D%22staging%22%7D%27%0A++target_label%3A+team%0A++replacement%3A+platform&labels=%7B__name__%3D%22http_requests_total%22%2C+job%3D%22web-api%22%2C+environment%3D%22prod%22%7D)
 
 ### How to change label values in scraped metrics
 
 To change the label values of scraped metrics, we use the following fields:
+
 - `target_label`: the label we want to modify (if it exists) or create,
 - `source_labels`: the label(s) whose values are used to compute the new value for `target_label`,
 - `replacement`: the value that will be computed and assigned to the `target_label`.
 
 Below are a few illustrations:
 
-- Add prod_ prefix to all values of the job label across all scraped metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5Bjob%5D%0A++target_label%3A+job%0A++replacement%3A+prod_%241&labels=node_memory_Active_bytes%7Bjob%3D%22node-exporter%22%2C+instance%3D%2210.0.0.1%3A9100%22%7D)):
+- Add `prod_` prefix to all values of the job label across all scraped metrics:
   ```yaml
   metric_relabel_configs:
-  - source_labels: [job]
-    target_label: job
-    replacement: prod_$1
+    - source_labels: [job]
+      target_label: job
+      replacement: prod_$1
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5Bjob%5D%0A++target_label%3A+job%0A++replacement%3A+prod_%241&labels=%7B__name__%3D%22node_memory_Active_bytes%22%2C+job%3D%22node-exporter%22%2C+instance%3D%2210.0.0.1%3A9100%22%7D)
 
-- Add `prod_` prefix to `job` label values only for metrics matching `{job=~"api-service-.*",env!="dev"}` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7Bjob%3D%7E%22api-service-.*%22%2Cenv%21%3D%22dev%22%7D%27%0A++source_labels%3A+%5Bjob%5D%0A++target_label%3A+job%0A++replacement%3A+prod_%241&labels=http_requests_total%7Bjob%3D%22api-service-orders%22%2C+env%3D%22staging%22%2C+instance%3D%2210.0.0.5%3A8080%22%7D)):
+- Add `prod_` prefix to `job` label values only for metrics matching `{job=~"api-service-.*",env!="dev"}`:
   ```yaml
   metric_relabel_configs:
-  - if: '{job=~"api-service-.*",env!="dev"}'
-    source_labels: [job]
-    target_label: job
-    replacement: prod_$1
+    - if: '{job=~"api-service-.*",env!="dev"}'
+      source_labels: [job]
+      target_label: job
+      replacement: prod_$1
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7Bjob%3D%7E%22api-service-.*%22%2Cenv%21%3D%22dev%22%7D%27%0A++source_labels%3A+%5Bjob%5D%0A++target_label%3A+job%0A++replacement%3A+prod_%241&labels=%7B__name__%3D%22http_requests_total%22%2Cjob%3D%22api-service-orders%22%2C+env%3D%22staging%22%2C+instance%3D%2210.0.0.5%3A8080%22%7D)
 
 ### How to remove labels from scraped metrics
 
 Removing labels from scraped metrics is a good idea to avoid [high cardinality](https://docs.victoriametrics.com/faq/#what-is-high-cardinality) and [high churn rate](https://docs.victoriametrics.com/faq/#what-is-high-churn-rate) issues.
 
 This can be done with either of the following actions:
+
 - `action: labeldrop`: drops labels with names matching the given `regex` option
 - `action: labelkeep`: drops labels with names not matching the given `regex` option
 
 Let's see this in action:
 
-- Remove labels with names starting with the `kubernetes_` prefix from all scraped metrics ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labeldrop%0A++regex%3A+%22kubernetes_.*%22&labels=container_cpu_usage_seconds_total%7Bcontainer%3D%22app%22%2C+kubernetes_namespace%3D%22default%22%2C+kubernetes_pod_name%3D%22app-123%22%7D)): 
+- Remove labels with names starting with the `kubernetes_` prefix from all scraped metrics:
   ```yaml
   metric_relabel_configs:
-  - action: labeldrop
-    regex: "kubernetes_.*"
+    - action: labeldrop
+      regex: "kubernetes_.*"
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labeldrop%0A++regex%3A+%22kubernetes_.*%22&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2Ccontainer%3D%22app%22%2C+kubernetes_namespace%3D%22default%22%2C+kubernetes_pod_name%3D%22app-123%22%7D)
 
 The `regex` option must match the whole label name from start to end, not just a part of it.
 
@@ -369,13 +390,13 @@ Instead of `labeldrop` or `labelkeep` actions, we use `drop` or `keep` actions i
 - `action: drop`: drops all metrics that match the `if` [series selector](https://docs.victoriametrics.com/keyconcepts/#filtering)
 - `action: keep`: drops all metrics that don't match the `if` [series selector](https://docs.victoriametrics.com/keyconcepts/#filtering)
 
-For example, the following config drops all metrics with names starting with `container_` ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__name__%3D%7E%22container_.*%22%7D%27%0A++action%3A+drop&labels=container_memory_usage_bytes%7Bcontainer%3D%22nginx%22%2C+pod%3D%22web-1%22%7D)):
-
+For example, the following config drops all metrics with names starting with `container_`:
 ```yaml
 metric_relabel_configs:
-- if: '{__name__=~"container_.*"}'
-  action: drop
+  - if: '{__name__=~"container_.*"}'
+    action: drop
 ```
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__name__%3D%7E%22container_.*%22%7D%27%0A++action%3A+drop&labels=%7B__name__%3D%22container_memory_usage_bytes%22%2Ccontainer%3D%22nginx%22%2C+pod%3D%22web-1%22%7D)
 
 Note that the relabeling config is specified under the `metric_relabel_configs` section instead of `relabel_configs` section. They serve different purposes:
 
@@ -385,6 +406,7 @@ Note that the relabeling config is specified under the `metric_relabel_configs` 
 ### How to remove labels from targets
 
 To remove some labels from targets discovered by the scrape job, use either:
+
 - `action: labeldrop`: drops labels with names matching the given `regex` option
 - `action: labelkeep`: drops labels with names not matching the given `regex` option
 
@@ -392,18 +414,18 @@ For example:
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - action: labelmap
-    regex: "__meta_kubernetes_pod_label_(.+)"
-    replacement: "pod_label_$1"
-  - action: labeldrop
-    regex: "pod_label_team_.*"
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - action: labelmap
+        regex: "__meta_kubernetes_pod_label_(.+)"
+        replacement: "pod_label_$1"
+      - action: labeldrop
+        regex: "pod_label_team_.*"
 ```
 
-[Try the above config here.](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22pod_label_%241%22%0A-+action%3A+labeldrop%0A++regex%3A+%22pod_label_team_.*%22&labels=container_memory_usage_bytes%7Bpod%3D%22nginx-abc123%22%2C+container%3D%22nginx%22%2C+namespace%3D%22default%22%2C+__meta_kubernetes_pod_label_app_kubernetes_io_name%3D%22nginx%22%2C+__meta_kubernetes_pod_label_team_backend%3D%22infra%22%2C+__meta_kubernetes_pod_label_team_frontend%3D%22dashboard%22%2C+__meta_kubernetes_pod_label_env%3D%22production%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22pod_label_%241%22%0A-+action%3A+labeldrop%0A++regex%3A+%22pod_label_team_.*%22&labels=%7B__name__%3D%22container_memory_usage_bytes%22%2Cpod%3D%22nginx-abc123%22%2C+container%3D%22nginx%22%2C+namespace%3D%22default%22%2C+__meta_kubernetes_pod_label_app_kubernetes_io_name%3D%22nginx%22%2C+__meta_kubernetes_pod_label_team_backend%3D%22infra%22%2C+__meta_kubernetes_pod_label_team_frontend%3D%22dashboard%22%2C+__meta_kubernetes_pod_label_env%3D%22production%22%7D)
 
 The job above will:
 
@@ -429,40 +451,40 @@ As an illustration:
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - action: labelmap
-    regex: "__meta_kubernetes_pod_label_(.+)"
-    replacement: "pod_label_$1"
-  - action: labeldrop
-    if: '{__address__=~"pod123.+"}'
-    regex: "pod_label_internal_.*"
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - action: labelmap
+        regex: "__meta_kubernetes_pod_label_(.+)"
+        replacement: "pod_label_$1"
+      - action: labeldrop
+        if: '{__address__=~"pod123.+"}'
+        regex: "pod_label_internal_.*"
 ```
 
-[Try the above config here.](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22pod_label_%241%22%0A-+action%3A+labeldrop%0A++if%3A+%27%7B__address__%3D%7E%22pod123.%2B%22%7D%27%0A++regex%3A+%22pod_label_internal_.*%22&labels=container_cpu_usage_seconds_total%7B__address__%3D%22pod123-api-0.default.svc%3A8080%22%2C__meta_kubernetes_pod_label_app%3D%22api%22%2C__meta_kubernetes_pod_label_env%3D%22staging%22%2C__meta_kubernetes_pod_label_internal_cost_center%3D%22devops%22%2C__meta_kubernetes_pod_label_internal_sensitive%3D%22true%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22pod_label_%241%22%0A-+action%3A+labeldrop%0A++if%3A+%27%7B__address__%3D%7E%22pod123.%2B%22%7D%27%0A++regex%3A+%22pod_label_internal_.*%22&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2C__address__%3D%22pod123-api-0.default.svc%3A8080%22%2C__meta_kubernetes_pod_label_app%3D%22api%22%2C__meta_kubernetes_pod_label_env%3D%22staging%22%2C__meta_kubernetes_pod_label_internal_cost_center%3D%22devops%22%2C__meta_kubernetes_pod_label_internal_sensitive%3D%22true%22%7D)
 
 ### How to remove prefixes from target label names
 
 You can modify target-labels including removing prefixes with the `action: labelmap` option.
 
-For example, [Kubernetes service discovery](https://docs.victoriametrics.com/sd_configs/#kubernetes_sd_configs) automatically adds special `__meta_kubernetes_pod_label_<labelname>` labels for each pod-level label. 
+For example, [Kubernetes service discovery](https://docs.victoriametrics.com/sd_configs/#kubernetes_sd_configs) automatically adds special `__meta_kubernetes_pod_label_<labelname>` labels for each pod-level label.
 
 All labels with the prefix `__` will be dropped automatically. To extract and keep only the `<labelname>` part of this special label, you can use `action: labelmap` combined with `regex` and `replacement` options:
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - action: labelmap
-    regex: "__meta_kubernetes_pod_label_(.+)"
-    replacement: "$1"
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - action: labelmap
+        regex: "__meta_kubernetes_pod_label_(.+)"
+        replacement: "$1"
 ```
 
-[Try the above config here.](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22%241%22&labels=container_cpu_usage_seconds_total%7B__address__%3D%2210.42.3.57%3A8080%22%2C+container%3D%22nginx%22%2C+pod%3D%22nginx-prod-5d9f%22%2C+namespace%3D%22default%22%2C+__meta_kubernetes_pod_label_app%3D%22nginx%22%2C+__meta_kubernetes_pod_label_env%3D%22production%22%2C+__meta_kubernetes_pod_label_team%3D%22devops%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+action%3A+labelmap%0A++regex%3A+%22__meta_kubernetes_pod_label_%28.%2B%29%22%0A++replacement%3A+%22%241%22&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2C__address__%3D%2210.42.3.57%3A8080%22%2C+container%3D%22nginx%22%2C+pod%3D%22nginx-prod-5d9f%22%2C+namespace%3D%22default%22%2C+__meta_kubernetes_pod_label_app%3D%22nginx%22%2C+__meta_kubernetes_pod_label_env%3D%22production%22%2C+__meta_kubernetes_pod_label_team%3D%22devops%22%7D)
 
 The regex contains a capture group `(.+)`. This capture group can be referenced inside the `replacement` option with the `$N` syntax, such as `$1` for the first capture group.
 
@@ -485,23 +507,23 @@ Let's take this case:
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_container_name]
-    regex: "[^/]+/(.+)"
-    replacement: "team_$1"
-    target_label: owner_team
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        regex: "[^/]+/(.+)"
+        replacement: "team_$1"
+        target_label: owner_team
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_container_name%5D%0A++regex%3A+%22%5B%5E%2F%5D%2B%2F%28.%2B%29%22%0A++replacement%3A+%22team_%241%22%0A++target_label%3A+owner_team&labels=container_cpu_usage_seconds_total%7B__address__%3D%2210.42.3.99%3A8080%22%2Cpod%3D%22orders-backend-5489f%22%2Cnamespace%3D%22production%22%2Ccontainer%3D%22backend%22%2C__meta_kubernetes_pod_container_name%3D%22app%2Fbackend%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_container_name%5D%0A++regex%3A+%22%5B%5E%2F%5D%2B%2F%28.%2B%29%22%0A++replacement%3A+%22team_%241%22%0A++target_label%3A+owner_team&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2C__address__%3D%2210.42.3.99%3A8080%22%2Cpod%3D%22orders-backend-5489f%22%2Cnamespace%3D%22production%22%2Ccontainer%3D%22backend%22%2C__meta_kubernetes_pod_container_name%3D%22app%2Fbackend%22%7D)
 
 The job above discovers pod targets in [Kubernetes](https://docs.victoriametrics.com/sd_configs/#kubernetes_sd_configs), and performs these actions:
 
-1. Extracts the value of `__meta_kubernetes_pod_container_name` label (e.g. `foo/bar`), 
-2. Matches it against the regex `[^/]+/(.+)`, 
-3. Computes the new value as `team_$1` with `$1` capture from regex `(.+)`, 
+1. Extracts the value of `__meta_kubernetes_pod_container_name` label (e.g. `foo/bar`),
+2. Matches it against the regex `[^/]+/(.+)`,
+3. Computes the new value as `team_$1` with `$1` capture from regex `(.+)`,
 4. Stores the result in the `owner_team` label.
 
 Note that:
@@ -520,25 +542,25 @@ Modifying `instance` and `job` labels works like other target-labels by using `t
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - target_label: job
-    replacement: kubernetes_pod_metrics
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - target_label: job
+        replacement: kubernetes_pod_metrics
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+job%0A++replacement%3A+kubernetes_pod_metrics&labels=container_memory_usage_bytes%7B__address__%3D%2210.42.3.99%3A8080%22%2C+container%3D%22checkout%22%2C+pod%3D%22checkout-api-5d9f%22%2C+namespace%3D%22production%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.3.99%3A8080%22%7D+65432100)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+job%0A++replacement%3A+kubernetes_pod_metrics&labels=%7B__name__%3D%22container_memory_usage_bytes%22%2C__address__%3D%2210.42.3.99%3A8080%22%2C+container%3D%22checkout%22%2C+pod%3D%22checkout-api-5d9f%22%2C+namespace%3D%22production%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.3.99%3A8080%22%7D)
 
 ### How to modify scrape URLs in targets
 
 URLs for scrape targets are composed of the following parts:
 
 - Scheme (e.g. `http`, `https`) is available during target relabeling in a special label - `__scheme__`. By default, it's set to `http` but can be overridden either by specifying the `scheme` option at [scrape_config](https://docs.victoriametrics.com/sd_configs/#scrape_configs) level or by updating the `__scheme__` label during relabeling.
-- Host and port (e.g. `host12:3456`) is available during target relabeling in a special label - `__address__`. Its value depends on the [service discovery type](https://docs.victoriametrics.com/sd_configs/#supported-service-discovery-configs). Sometimes this value needs to be modified. In this case, just update the `__address__` label during relabeling to the needed value. 
+- Host and port (e.g. `host12:3456`) is available during target relabeling in a special label - `__address__`. Its value depends on the [service discovery type](https://docs.victoriametrics.com/sd_configs/#supported-service-discovery-configs). Sometimes this value needs to be modified. In this case, just update the `__address__` label during relabeling to the needed value.
   - The port part is optional. If it is missing, it's automatically set depending on the scheme (`80` for `http` or `443` for `https`). The `host:port` part from the final `__address__` label is automatically set to the `instance` label. The `__address__` label can contain the full scrape URL (e.g. `http://host:port/metrics/path?query_args`). In this case the `__scheme__` and `__metrics_path__` labels are ignored.
 - URL path (e.g. `/metrics`) is available during target relabeling in a special label - `__metrics_path__`. By default, it's set to `/metrics` and can be overridden either by specifying the `metrics_path` option at [scrape_config](https://docs.victoriametrics.com/sd_configs/#scrape_configs) level or by updating the `__metrics_path__` label during relabeling.
-- Query args (e.g. `?foo=bar&baz=xyz`) are available during target relabeling in special labels with the `__param_` prefix. 
+- Query args (e.g. `?foo=bar&baz=xyz`) are available during target relabeling in special labels with the `__param_` prefix.
   - Take `?foo=bar&baz=xyz` for example. There will be two special labels: `__param_foo="bar"` and `__param_baz="xyz"`. The query args can be specified either via the `params` section at [scrape_config](https://docs.victoriametrics.com/sd_configs/#scrape_configs) or by updating/setting the corresponding `__param_*` labels during relabeling.
 
 The resulting scrape URL looks like the following:
@@ -551,20 +573,20 @@ Given the scrape URL construction rules above, the following config discovers po
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  metrics_path: /metrics/container
-  relabel_configs:
-  - target_label: __scheme__
-    replacement: https
-  - source_labels: [__meta_kubernetes_pod_name]
-    target_label: __address__
-  - source_labels: [__meta_kubernetes_pod_container_name]
-    target_label: __param_name
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    metrics_path: /metrics/container
+    relabel_configs:
+      - target_label: __scheme__
+        replacement: https
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_pod_container_name]
+        target_label: __param_name
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+__scheme__%0A++replacement%3A+https%0A-+source_labels%3A+%5B__meta_kubernetes_pod_name%5D%0A++target_label%3A+__address__%0A-+source_labels%3A+%5B__meta_kubernetes_pod_container_name%5D%0A++target_label%3A+__param_name&labels=container_cpu_usage_seconds_total%7B__meta_kubernetes_pod_name%3D%22checkout-api-58c9d%22%2C+__meta_kubernetes_pod_container_name%3D%22app%22%2C+__meta_kubernetes_namespace%3D%22production%22%2C+__meta_kubernetes_pod_ip%3D%2210.42.6.25%22%2C+__address__%3D%2210.42.6.25%3A9100%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.6.25%3A9100%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+__scheme__%0A++replacement%3A+https%0A-+source_labels%3A+%5B__meta_kubernetes_pod_name%5D%0A++target_label%3A+__address__%0A-+source_labels%3A+%5B__meta_kubernetes_pod_container_name%5D%0A++target_label%3A+__param_name&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2C__meta_kubernetes_pod_name%3D%22checkout-api-58c9d%22%2C+__meta_kubernetes_pod_container_name%3D%22app%22%2C+__meta_kubernetes_namespace%3D%22production%22%2C+__meta_kubernetes_pod_ip%3D%2210.42.6.25%22%2C+__address__%3D%2210.42.6.25%3A9100%22%2C+job%3D%22k8s%22%2C+instance%3D%2210.42.6.25%3A9100%22%7D)
 
 ### How to copy labels in scrape targets
 
@@ -577,15 +599,15 @@ The following config copies the `__meta_kubernetes_pod_name` label to the `pod` 
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_name]
-    target_label: pod
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_name%5D%0A++target_label%3A+pod&labels=container_cpu_usage_seconds_total%7B__meta_kubernetes_pod_name%3D%22nginx-deployment-65f7c58c5b-bxjzs%22%2Cnamespace%3D%22default%22%2Ccontainer%3D%22nginx%22%2Cpod_name%3D%22nginx-deployment-65f7c58c5b-bxjzs%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_name%5D%0A++target_label%3A+pod&labels=%7B__name__%3D%22container_cpu_usage_seconds_total%22%2C__meta_kubernetes_pod_name%3D%22nginx-deployment-65f7c58c5b-bxjzs%22%2Cnamespace%3D%22default%22%2Ccontainer%3D%22nginx%22%2Cpod_name%3D%22nginx-deployment-65f7c58c5b-bxjzs%22%7D)
 
 If `source_labels` contains multiple labels, their values are joined with a `;` delimiter by default. Use the `separator` option to change this delimiter.
 
@@ -593,16 +615,22 @@ For example, this config combines pod name and container port into the `host_por
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - source_labels: [__meta_kubernetes_pod_name, __meta_kubernetes_pod_container_port_number]
-    separator: ":"
-    target_label: host_port
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels:
+          [
+            __meta_kubernetes_pod_name,
+            __meta_kubernetes_pod_container_port_number,
+          ]
+        separator: ":"
+        target_label: host_port
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_name%2C+__meta_kubernetes_pod_container_port_number%5D%0A++separator%3A+%22%3A%22%0A++target_label%3A+host_port&labels=container_network_receive_bytes_total%7B__meta_kubernetes_pod_name%3D%22api-server-746d95f76f-7r2hp%22%2C__meta_kubernetes_pod_container_port_number%3D%228080%22%2Cnamespace%3D%22backend%22%2Ccontainer%3D%22api%22%2Cinterface%3D%22eth0%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+source_labels%3A+%5B__meta_kubernetes_pod_name%2C+__meta_kubernetes_pod_container_port_number%5D%0A++separator%3A+%22%3A%22%0A++target_label%3A+host_port&labels=%7B__name__%3D%22container_network_receive_bytes_total%22%2C__meta_kubernetes_pod_name%3D%22api-server-746d95f76f-7r2hp%22%2C__meta_kubernetes_pod_container_port_number%3D%228080%22%2Cnamespace%3D%22backend%22%2Ccontainer%3D%22api%22%2Cinterface%3D%22eth0%22%7D)
+
+<!-- {{% collapse name="How to add labels to scrape targets" %}} -->
 
 ### How to add labels to scrape targets
 
@@ -615,34 +643,36 @@ For example, this config adds a `environment="production"` label to all discover
 
 ```yaml
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  relabel_configs:
-  - target_label: "environment"
-    replacement: "production"
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - target_label: "environment"
+        replacement: "production"
 ```
 
-[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22environment%22%0A++replacement%3A+%22production%22&labels=container_memory_usage_bytes%7Bcontainer%3D%22redis%22%2C+namespace%3D%22cache%22%2C+pod%3D%22redis-cache-9df49c5b9-hxz6m%22%7D)
+[Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+target_label%3A+%22environment%22%0A++replacement%3A+%22production%22&labels=%7B__name__%3D%22container_memory_usage_bytes%22%2Ccontainer%3D%22redis%22%2C+namespace%3D%22cache%22%2C+pod%3D%22redis-cache-9df49c5b9-hxz6m%22%7D)
 
-If there is a conflict between target labels and metrics exported by the target (scrape-time labels), the `exported_` prefix is added to scrape-time labels.
+If a label from the scrape configuration (`target_label`) conflicts with a label from the scraped metric (scrape-time label), the original scrape-time label is renamed by adding an `exported_` prefix.
 
-To keep the scrape-time labels unchanged and let them override target labels, specify `honor_labels: true` in the scrape config. This gives priority to the labels from the scraped metrics.
+To avoid this renaming and instead let the scrape-time labels take priority (overriding target labels), set `honor_labels: true` in the scrape configuration.
 
 For example, this config adds a `environment="production"` label to all discovered pods, but if any pod already exports a `environment` label, that value will override the target label:
 
-```yaml
+```yaml {hl_lines="5"}
 scrape_configs:
-- job_name: k8s
-  kubernetes_sd_configs:
-  - role: pod
-  honor_labels: true # <--
-  relabel_configs:
-  - target_label: "environment"
-    replacement: "production"
+  - job_name: k8s
+    kubernetes_sd_configs:
+      - role: pod
+    honor_labels: true # <--
+    relabel_configs:
+      - target_label: "environment"
+        replacement: "production"
 ```
 
 See also [useful tips for target relabeling](#useful-tips-for-target-relabeling).
+
+<!-- {{% /collapse %}} -->
 
 ### How to drop discovered targets
 
@@ -653,27 +683,29 @@ To drop a particular discovered target, use the following options:
 
 Here are examples of these options:
 
-- This config discovers pods in [Kubernetes](https://docs.victoriametrics.com/sd_configs/#kubernetes_sd_configs) and drops all pods with names starting with the `test-` prefix ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__meta_kubernetes_pod_name%3D%7E%22test-.*%22%7D%27%0A++action%3A+drop&labels=http_requests_total%7B__meta_kubernetes_pod_name%3D%22test-payment-7cbd8d77b6-4l5xv%22%2Cnamespace%3D%22qa%22%2Capp%3D%22payment-service%22%7D)):
+- This config discovers pods in [Kubernetes](https://docs.victoriametrics.com/sd_configs/#kubernetes_sd_configs) and drops all pods with names starting with the `test-` prefix:
   ```yaml
   scrape_configs:
-  - job_name: prod_pods_only
-    kubernetes_sd_configs:
-    - role: pod
-    relabel_configs:
-    - if: '{__meta_kubernetes_pod_name=~"test-.*"}'
-      action: drop
+    - job_name: prod_pods_only
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - if: '{__meta_kubernetes_pod_name=~"test-.*"}'
+          action: drop
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__meta_kubernetes_pod_name%3D%7E%22test-.*%22%7D%27%0A++action%3A+drop&labels=%7B__name__%3D%22http_requests_total%22%2C__meta_kubernetes_pod_name%3D%22test-payment-7cbd8d77b6-4l5xv%22%2Cnamespace%3D%22qa%22%2Capp%3D%22payment-service%22%7D)
 
-- This config keeps only pods with names starting with the `backend-` prefix ([Try it](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__meta_kubernetes_pod_name%3D%7E%22backend-.*%22%7D%27%0A++action%3A+keep&labels=container_memory_usage_bytes%7B__meta_kubernetes_pod_name%3D%22frontend-auth-5cbdbb7ff8-qf82n%22%2Cnamespace%3D%22prod%22%2Ccontainer%3D%22auth%22%7D)):
+- This config keeps only pods with names starting with the `backend-` prefix:
   ```yaml
   scrape_configs:
-  - job_name: backend_pods
-    kubernetes_sd_configs:
-    - role: pod
-    relabel_configs:
-    - if: '{__meta_kubernetes_pod_name=~"backend-.*"}'
-      action: keep
+    - job_name: backend_pods
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - if: '{__meta_kubernetes_pod_name=~"backend-.*"}'
+          action: keep
   ```
+  [Try the above config here](https://play.victoriametrics.com/select/0/prometheus/graph/#/relabeling?config=-+if%3A+%27%7B__meta_kubernetes_pod_name%3D%7E%22backend-.*%22%7D%27%0A++action%3A+keep&labels=%7B__name__%3D%22container_memory_usage_bytes%22%2C__meta_kubernetes_pod_name%3D%22frontend-auth-5cbdbb7ff8-qf82n%22%2Cnamespace%3D%22prod%22%2Ccontainer%3D%22auth%22%7D)
 
 See also [useful tips for target relabeling](#useful-tips-for-target-relabeling).
 
@@ -683,7 +715,7 @@ See also [useful tips for target relabeling](#useful-tips-for-target-relabeling)
 - Special labels with the `__` prefix are automatically added when discovering targets and removed after relabeling:
   - Meta-labels starting with the `__meta_` prefix. The specific sets of labels for each supported service discovery option are listed in [Prometheus Service Discovery](https://docs.victoriametrics.com/sd_configs/#prometheus-service-discovery).
   - Additional labels with the `__` prefix other than `__meta_` labels, such as [`__scheme__` or `__address__`](#how-to-modify-scrape-urls-in-targets).
-  It is common practice to store temporary labels with names starting with `__` during target relabeling.
+    It is common practice to store temporary labels with names starting with `__` during target relabeling.
 - All target-level labels are automatically added to all metrics scraped from targets.
 - The list of discovered scrape targets with all discovered meta-labels is available on the `http://vmagent:8429/service-discovery` page for `vmagent` and on the `http://victoriametrics:8428/service-discovery` page for single-node VictoriaMetrics.
 - The list of active targets with the final set of target-labels after relabeling is available on the `http://vmagent:8429/targets` page for `vmagent` and on the `http://victoriametrics:8428/targets` page for single-node VictoriaMetrics.
